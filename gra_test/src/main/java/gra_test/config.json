@@ -1,0 +1,30 @@
+{
+  "connection": {
+    "replicas": [
+      "<private DNS 1>",
+      "<private DNS 2>",
+      "<private DNS 3>"
+    ],
+
+    "replicaSet": "rs0",
+
+    "database":  "test",
+    "collection":  "testCollection"
+  },
+
+  "readConcern": "majority",
+
+  "writeConcern": "majority",
+
+  "readPreference": "primaryPreferred",
+
+  "numThread": "10",
+
+  "writeProbability": "0.7",
+
+  "experiment": "300",
+
+  "failure": "poweroff"
+
+}
+
