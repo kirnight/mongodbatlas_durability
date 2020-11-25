@@ -8,3 +8,5 @@ All the source code can be found under the path: `/gra_test/src/main/java/gra_te
 
 To run the code in AWS EC2 VM, copy the repo and type in:
 `./gradlew run`
+
+The result file containing all the records can be found in `/gra_test/src/main/java`
