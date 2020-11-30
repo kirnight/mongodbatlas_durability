@@ -11,4 +11,4 @@ To run the code in AWS EC2 VM, copy the repo and type in:
 
 The result file containing all the records can be found in `/gra_test/src/main/java`
 
-For data analysis, please use python file: `analysis.py` and change the file relative path inside the file.
+For data analysis, please use python file: `analysis.py` and change the relative path of result file.
