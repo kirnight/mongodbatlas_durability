@@ -1,19 +1,28 @@
 package gra_test;
 
 
-import com.amazonaws.services.ec2.model.StartInstancesRequest;
+//import com.mongodb.reactivestreams.client.MongoDatabase;
+import org.reactivestreams.Publisher;
 import com.mongodb.client.MongoDatabase;
+
+
 import org.bson.Document;
 
-import com.amazonaws.services.ec2.AmazonEC2;
+
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.regions.Regions;
+import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
-import com.amazonaws.services.ec2.model.StopInstancesRequest;
+import com.amazonaws.services.ec2.model.StartInstancesRequest;
 
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.HashMap;
+import java.util.List;
+
 
 public class PoweroffFailure implements Failure {
 
@@ -21,6 +30,7 @@ public class PoweroffFailure implements Failure {
     public HashMap<String, String> map;
     public String shutdownvm;
     private static final AWSCredentials credentials;
+    private static final String myKey = "<path to private key>"; // ssh private key path
     public AmazonEC2 ec2Client;
 
     static {
@@ -30,6 +40,8 @@ public class PoweroffFailure implements Failure {
                 "<secretKey>"
         );
     }
+
+
 
     public PoweroffFailure(MongoDatabase database, HashMap map){
         this.database = database;
@@ -43,20 +55,42 @@ public class PoweroffFailure implements Failure {
 
     @Override
     public void InduceAsync() {
-        String isMaster = (String) database.runCommand(new Document("isMaster", 1)).get("primary");
-        shutdownvm = isMaster.split(":")[0];
-        StopInstancesRequest stopInstancesRequest = new StopInstancesRequest()
-                .withInstanceIds(map.get(shutdownvm));
 
-        // Stop an Instance with power off option
-        stopInstancesRequest.setForce(true);
+//        // Create a publisher(JUST FOR ASYNC)
+//        Publisher<Document> publisher = database.runCommand(new Document("isMaster", 1));
+//
+//        SubscriberHelpers.ObservableSubscriber<Document> subscriber = new SubscriberHelpers.ObservableSubscriber<>();
+//        publisher.subscribe(subscriber);
+//        try {
+//            subscriber.await();
+//        } catch (Throwable throwable) {
+//            throwable.printStackTrace();
+//        }
+//        List<Document> master = subscriber.getReceived(); // Block for the publisher to complete
+//
+//        String isMaster = (String) master.get(0).get("primary");
+
+        String isMaster = (String) database.runCommand(new Document("isMaster", 1)).get("primary");  // Sync driver
+        shutdownvm = isMaster.split(":")[0];
 
         System.out.println("Poweroff Server:"+this.shutdownvm+" instance ID:"+map.get(shutdownvm));
-        ec2Client.stopInstances(stopInstancesRequest)
-                .getStoppingInstances()
-                .get(0)
-                .getPreviousState()
-                .getName();
+
+        // Poweroff signal is sent through terminal command
+
+        Runtime runtime = Runtime.getRuntime();
+        String command = "ssh -i "+myKey+" "+shutdownvm+" -o StrictHostKeyChecking=no\n sudo poweroff -f";
+        try {
+            Process process = runtime.exec(command);
+            BufferedReader err = new BufferedReader(new InputStreamReader((process.getErrorStream())));
+            String in;
+            while((in = err.readLine())!=null){
+                System.out.println(in);
+            }
+            err.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     @Override

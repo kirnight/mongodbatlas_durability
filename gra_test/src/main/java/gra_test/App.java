@@ -1,13 +1,17 @@
 package gra_test;
 
 import com.mongodb.*;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+//import com.mongodb.reactivestreams.client.MongoClient;
+//import com.mongodb.reactivestreams.client.MongoClients;
+//import com.mongodb.reactivestreams.client.MongoCollection;
+//import com.mongodb.reactivestreams.client.MongoDatabase;
+import com.mongodb.client.*;
+
+import com.mongodb.internal.client.model.FindOptions;
 import org.bson.Document;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import org.reactivestreams.Publisher;
 
 import java.io.BufferedWriter;
 import java.io.FileReader;
@@ -17,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,28 +47,42 @@ public class App {
         mongoLogger.setLevel(Level.SEVERE); // System log for mongo(will not use that for experiment)
 
 
-        // 3 private internal DNS of AWS EC2 VM instances(for convenience)
-        String privatePrimary = "<DNS 1>";
-        String privateSecondary1 = "<DNS 2>";
-        String privateSecondary2 = "<DNS 3>";
+        // 3 private internal DNS of AWS EC2 VM instances
+        List<String> servers = settings.getServerList();
+        String server0 = servers.get(0);
+        String server1 = servers.get(1);
+        String server2 = servers.get(2);
+
         // private internal DNS and instance id mapping
+        List<String> instances = settings.getInstanceId();
         HashMap<String, String> map = new HashMap<String, String>();
-        map.put(privatePrimary, "<instance 1 id>"); // (node0_4.4)
-        map.put(privateSecondary1, "<instance 2 id>"); // (node1_4.4)
-        map.put(privateSecondary2, "<instance 3 id>"); // (node2_4.4)
+        map.put(server0, instances.get(0)); // (node0)
+        map.put(server1, instances.get(1)); // (node1)
+        map.put(server2, instances.get(2)); // (node2)
 
         // 1 mongo client instance setup
-        String connectionurl = "mongodb://"+privatePrimary+","+privateSecondary1+","+privateSecondary2+"/?replicaSet=rs0&retryWrites=false";
+        String connectionurl = "mongodb://"+server0+","+server1+","+server2+"/?replicaSet=rs0&connectTimeoutMS=2000&socketTimeoutMS=2000";
         int numThreads = settings.getConnectionPoolSize();
-        MongoClient mongoClient = MongoClients.create(
-                MongoClientSettings.builder()
-                        .applyConnectionString(new ConnectionString(connectionurl))
-                        .readConcern(settings.getReadconcern())
-                        .readPreference(settings.getReadpreference())
-                        .writeConcern(settings.getWriteconcern())
-                        .applyToConnectionPoolSettings(builder -> builder.maxSize(numThreads))
-                        .applyToConnectionPoolSettings(builder -> builder.minSize(numThreads))
-                        .build());
+        MongoClientSettings clientSettings = MongoClientSettings.builder()
+                .applyConnectionString(new ConnectionString(connectionurl))
+                .readConcern(settings.getReadconcern())
+                .readPreference(settings.getReadpreference())
+                .writeConcern(settings.getWriteconcern())
+                .applyToConnectionPoolSettings(builder -> builder.maxSize(numThreads))
+                .applyToConnectionPoolSettings(builder -> builder.minSize(numThreads))
+                .applyToClusterSettings(builder -> builder.serverSelectionTimeout(1000, TimeUnit.MILLISECONDS))
+                .retryReads(false)
+                .retryWrites(false)
+                .build();
+
+        System.out.println(clientSettings.getServerSettings());
+        System.out.println(clientSettings.getConnectionPoolSettings());
+        System.out.println(clientSettings.getHeartbeatSocketSettings());
+        System.out.println(clientSettings.getRetryReads());
+        System.out.println(clientSettings.getSocketSettings());
+
+
+        MongoClient mongoClient = MongoClients.create(clientSettings);
 
 
         MongoDatabase database = mongoClient.getDatabase("test");
@@ -74,24 +93,30 @@ public class App {
 
         // warmup
         Warmup(mongoClient);
-        System.out.println("Warmup complete. Setting up...");
+        System.out.println("Warmup complete. Setting up...\n");
 
-        int operationInterval =10;
-        int IntervalVariance=10;
+        // Replica set status check
+        System.out.println("Database servers info: "+mongoClient.getClusterDescription().getShortDescription());
+        System.out.println("Write concern: "+collection.getWriteConcern());
+        System.out.println("Read concern: "+collection.getReadConcern().getLevel());
+        System.out.println("Read preference: "+collection.getReadPreference());
+        System.out.println();
 
         double WriteProbability = settings.getWriteProbability();
         int ExperimentTime = settings.getExperimentTime();
+        int operationInterval = settings.getOperationInterval(); // Not used
+        int intervalVariance = settings.getIntervalVariance(); // Not used
 
         // Multithreading, serving as different clients
         Thread[] runners = new Thread[numThreads+1];
 
         // log record for experiment
-        List<ArrayList<LogRecord>> logs = new ArrayList<ArrayList<LogRecord>>(); //concurrentbag may be considered
+        List<List<LogRecord>> logs = new ArrayList<>(); //concurrentbag may be considered
 
         // Define threads
         for(int i = 0; i < numThreads; i++){
             ExperimentRunner runner = new ExperimentRunner(new MyLogger(), new MongoCommand(mongoClient,collection));
-            runners[i] = new Thread(new clientRunnable(runner, logs, operationInterval, IntervalVariance, WriteProbability, ExperimentTime)); // operationInterval, IntervalVariance are not used
+            runners[i] = new Thread(new clientRunnable(runner, logs, operationInterval, intervalVariance, WriteProbability, ExperimentTime)); // operationInterval, IntervalVariance are not used
         }
 
         //Failure thread setup
@@ -127,9 +152,6 @@ public class App {
         System.out.println("Ordering and writing records:"+completeLog.size());
         System.out.println(fail.logger.fail+"  "+ fail.logger.fix);
         completeLog.sort(Comparator.comparing(o -> o.timeStamp));
-//        for(int k = 0; k < completeLog.size();k++){
-//            System.out.println(completeLog.get(k).toString());
-//        }
 
 
         try {
@@ -145,7 +167,7 @@ public class App {
         }
 
 
-
+        mongoClient.close();
         System.out.println("End of experiment");
         return;
     }
@@ -154,6 +176,30 @@ public class App {
     {
         while (true)
         {
+//            // Create a publisher(JUST FOR ASYNC)
+//            Publisher<Document> publisher = client.getDatabase("admin").runCommand(new Document("replSetGetStatus", 1));
+//
+//            SubscriberHelpers.ObservableSubscriber<Document> subscriber = new SubscriberHelpers.ObservableSubscriber<>();
+//            publisher.subscribe(subscriber);
+//            try {
+//                subscriber.await();
+//            } catch (Throwable throwable) {
+//                throwable.printStackTrace();
+//            }
+//            List<Document> status = subscriber.getReceived(); // Block for the publisher to complete
+//
+//            if ((double) status.get(0).get("ok") == 1)
+//            {
+//                break;
+//            }
+//
+//            try {
+//                Thread.sleep(100);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+
+            // JUST FOR SYNC
             Document status = client.getDatabase("admin").runCommand(new Document("replSetGetStatus", 1));
             if ((double) status.get("ok") == 1)
             {

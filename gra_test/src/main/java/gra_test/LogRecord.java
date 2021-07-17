@@ -27,6 +27,11 @@ public class LogRecord {
     }
 
     public String toString(){
-        return operation+" "+id+" "+timeStamp.toString()+" "+val+" "+duration.toString()+" "+isError;
+        if(this.isError){
+            return "ERR,"+operation+","+id+","+val+","+duration.toString()+","+timeStamp.toString();
+        }else{
+            return operation+","+id+","+val+","+duration.toString()+","+timeStamp.toString();
+        }
+
     }
 }

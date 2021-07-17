@@ -6,14 +6,17 @@ import org.bson.Document;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
+
 
 public class ExperimentRunner {
 
     public MyLogger myLogger;
     public MongoCommand client;
 
-    public ArrayList<ObjectId> ids;
+    public List<ObjectId> ids;
     public Random rng;
 
     public ExperimentRunner(MyLogger myLogger, MongoCommand client)
@@ -21,10 +24,10 @@ public class ExperimentRunner {
         this.myLogger = myLogger;
         this.client = client;
         this.rng = new Random();
-        this.ids = new ArrayList<ObjectId>();
+        this.ids = Collections.synchronizedList(new ArrayList<ObjectId>());
     }
 
-    public ArrayList<LogRecord> Run(int opInterval, int variance, double writeLoad, int experimentTime)
+    public List<LogRecord> Run(int opInterval, int variance, double writeLoad, int experimentTime)
     {
         Setup();
 
@@ -32,8 +35,11 @@ public class ExperimentRunner {
 
         while (LocalDateTime.now().isBefore(endTime))
         {
+
             RunOpAsync(writeLoad);
+
         }
+
 
         return myLogger.GetLogs();
 
@@ -80,22 +86,29 @@ public class ExperimentRunner {
         {
             resultValue = client.GetAsync(id);
         }
-        catch(Exception e)
+        catch(Throwable e)
         {
+            System.out.println("read error");
             myLogger.LogErrAsync("R", id.toString(), -1, Duration.between(before,LocalDateTime.now()));
             return;
         }
         LocalDateTime after = LocalDateTime.now();
 
-        myLogger.LogReadAsync(id.toString(), (int)resultValue.get("val"), Duration.between(before,after));
+        if(resultValue == null || resultValue.get("val") == null){
+            myLogger.LogReadAsync(id.toString(), -1, Duration.between(before,after));
+        }else{
+            myLogger.LogReadAsync(id.toString(), (int)resultValue.get("val"), Duration.between(before,after));
+        }
+
+
 
     }
 
     private void WriteAsync()
     {
-        int val = rng.nextInt();
+        int val = rng.nextInt(20000);
 
-        Document doc = new Document().append("val",val);
+        Document doc = new Document().append("_id", new ObjectId()).append("val",val);
 
         LocalDateTime before = LocalDateTime.now();
 
@@ -103,8 +116,9 @@ public class ExperimentRunner {
         {
             client.WriteAsync(doc);
         }
-        catch(Exception e)
+        catch(Throwable e)
         {
+            System.out.println("write error");
             myLogger.LogErrAsync("W", doc.getObjectId("_id").toString(), val, Duration.between(before,LocalDateTime.now()));
             return;
         }
@@ -120,7 +134,7 @@ public class ExperimentRunner {
     {
         ObjectId id = GetRandomObjectId();
 
-        int val = rng.nextInt();
+        int val = rng.nextInt(20000);
 
         Document doc;
 
@@ -130,8 +144,9 @@ public class ExperimentRunner {
         {
             doc = client.UpdateAsync(id, val);
         }
-        catch(Exception e)
+        catch(Throwable e)
         {
+            System.out.println("update error");
             myLogger.LogErrAsync("U", id.toString(), val, Duration.between(before,LocalDateTime.now()));
             return;
         }

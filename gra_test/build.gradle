@@ -31,6 +31,7 @@ dependencies {
     testImplementation 'junit:junit:4.12'
 
     compile 'org.mongodb:mongodb-driver-sync:4.1.0'
+    compile 'org.mongodb:mongodb-driver-reactivestreams:4.1.1'
     compile 'com.googlecode.json-simple:json-simple:1.1.1'
     implementation platform('com.amazonaws:aws-java-sdk-bom:1.11.882')
     implementation 'com.amazonaws:aws-java-sdk-ec2'

@@ -1,19 +1,23 @@
 package gra_test;
 
 
+//import com.mongodb.reactivestreams.client.MongoDatabase;
+import org.reactivestreams.Publisher;
 import com.mongodb.client.MongoDatabase;
+
 import org.bson.Document;
 
-import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.regions.Regions;
+import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
-import com.amazonaws.services.ec2.model.StopInstancesRequest;
 import com.amazonaws.services.ec2.model.StartInstancesRequest;
+import com.amazonaws.services.ec2.model.StopInstancesRequest;
 
 import java.util.HashMap;
+import java.util.List;
 
 public class ShutdownFailure implements Failure {
 
@@ -43,8 +47,24 @@ public class ShutdownFailure implements Failure {
 
     @Override
     public void InduceAsync() {
-        String isMaster = (String) database.runCommand(new Document("isMaster", 1)).get("primary");
+
+//        // Create a publisher(JUST FOR ASYNC)
+//        Publisher<Document> publisher = database.runCommand(new Document("isMaster", 1));
+//
+//        SubscriberHelpers.ObservableSubscriber<Document> subscriber = new SubscriberHelpers.ObservableSubscriber<>();
+//        publisher.subscribe(subscriber);
+//        try {
+//            subscriber.await();
+//        } catch (Throwable throwable) {
+//            throwable.printStackTrace();
+//        }
+//        List<Document> master = subscriber.getReceived(); // Block for the publisher to complete
+//
+//        String isMaster = (String) master.get(0).get("primary");
+
+        String isMaster = (String) database.runCommand(new Document("isMaster", 1)).get("primary");  // Sync driver
         shutdownvm = isMaster.split(":")[0];
+
         StopInstancesRequest stopInstancesRequest = new StopInstancesRequest()
                 .withInstanceIds(map.get(shutdownvm));
 
@@ -57,6 +77,7 @@ public class ShutdownFailure implements Failure {
                 .get(0)
                 .getPreviousState()
                 .getName();
+
     }
 
     @Override

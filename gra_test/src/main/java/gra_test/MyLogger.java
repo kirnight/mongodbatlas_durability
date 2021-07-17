@@ -3,13 +3,15 @@ package gra_test;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class MyLogger {
-    public ArrayList<LogRecord> logs;
+    public List<LogRecord> logs;
 
     public MyLogger()
     {
-        this.logs = new ArrayList<LogRecord>();
+        this.logs = Collections.synchronizedList(new ArrayList<LogRecord>());
     }
 
     public void LogReadAsync(String id, int val, Duration time)
@@ -32,7 +34,7 @@ public class MyLogger {
         logs.add(new LogRecord(op, id, val, LocalDateTime.now(), time, true));
     }
 
-    public ArrayList<LogRecord> GetLogs()
+    public List<LogRecord> GetLogs()
     {
         return this.logs;
     }

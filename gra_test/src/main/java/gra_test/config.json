@@ -1,30 +1,38 @@
 {
-  "connection": {
-    "replicas": [
-      "<private DNS 1>",
-      "<private DNS 2>",
-      "<private DNS 3>"
-    ],
+  "replicas": [
+      "<replicas1>",
+      "<replicas2>",
+      "<replicas3>"
+  ],
 
-    "replicaSet": "rs0",
+  "awsinstanceid": [
+    "<awsinstanceid1>",
+    "<awsinstanceid2>",
+    "<awsinstanceid3>"
+  ],
 
-    "database":  "test",
-    "collection":  "testCollection"
-  },
+  "replicaSet": "rs0",
 
-  "readConcern": "majority",
+  "database":  "test",
 
-  "writeConcern": "majority",
+  "collection":  "testCollection",
 
-  "readPreference": "primaryPreferred",
+  "readConcern": "local",
 
-  "numThread": "10",
+  "writeConcern": "primary",
+
+  "readPreference": "primary",
+
+  "numThread": "20",
 
   "writeProbability": "0.7",
+
+  "operationInterval": "20",
+
+  "intervalVariance": "1",
 
   "experiment": "300",
 
   "failure": "poweroff"
 
 }
-
