@@ -1,5 +1,17 @@
 #! /usr/bin/env python3
-from datetime import datetime
+from datetime import datetime, timedelta
+import re
+
+def parse_duration(duration_str):
+    pattern = re.compile(r'PT(?:(\d+)H)?(?:(\d+)M)?(\d+(?:\.\d+)?S)?')
+    parts = pattern.match(duration_str)
+    if not parts:
+        return None
+    parts = parts.groups()
+    hours = int(parts[0]) if parts[0] else 0
+    minutes = int(parts[1]) if parts[1] else 0
+    seconds = float(parts[2].rstrip('S')) if parts[2] else 0.0
+    return timedelta(hours=hours, minutes=minutes, seconds=seconds).total_seconds()
 
 docs = {}
 errored_writes = {}
@@ -12,7 +24,7 @@ errors = set()
 docs_missing_writes = set()
 unack_writes = set()
 
-filename = "result.txt"
+filename = "result/result_poweroff_large.txt"
 f = open(filename, "r")
 
 stats_line = f.readline().strip().split('  ')
@@ -20,7 +32,7 @@ stats_line = f.readline().strip().split('  ')
 fail_time = datetime.strptime(stats_line[0], '%Y-%m-%dT%H:%M:%S.%f')
 fix_time = datetime.strptime(stats_line[1], '%Y-%m-%dT%H:%M:%S.%f')
 
-print(fail_time, fix_time)
+print(f"fail time: {fail_time}, fix time: {fix_time}")
 while True:
     try:
         text = f.readline().strip()
@@ -34,6 +46,7 @@ while True:
     fields = text.split(' ')
 
     try:
+        # print(fields)
         time = datetime.strptime(fields[2], '%Y-%m-%dT%H:%M:%S.%f')
     except ValueError:
         try:
@@ -64,7 +77,7 @@ while True:
             doc, time, actual, duration, err = fields[1:]
             expected = docs[doc][0]
             actual = int(actual)
-            duration = float(duration.strip("PTS"))
+            duration = parse_duration(duration)
             try:
                 time = datetime.strptime(time, '%Y-%m-%dT%H:%M:%S.%f')
             except ValueError:
@@ -88,7 +101,7 @@ while True:
         if op == "U":
             doc, time, val, duration, err = fields[1:]
             val = int(val)
-            duration = float(duration.strip("PTS"))
+            duration = parse_duration(duration)
             try:
                 time = datetime.strptime(time, '%Y-%m-%dT%H:%M:%S.%f')
             except ValueError:
@@ -103,7 +116,7 @@ while True:
         if op == "W":
             doc, time, val, duration, err = fields[1:]
             val = int(val)
-            duration = float(duration.strip("PTS"))
+            duration = parse_duration(duration)
             try:
                 time = datetime.strptime(time, '%Y-%m-%dT%H:%M:%S.%f')
             except ValueError:

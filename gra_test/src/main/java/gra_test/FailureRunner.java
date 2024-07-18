@@ -26,7 +26,8 @@ public class FailureRunner {
         System.out.println("Failure Induced");
         this.logger.LogFailureCompleteAsync();
         try {
-            CompletableFuture.runAsync(()->this.failure.InduceAsync()).get(1, TimeUnit.SECONDS); // Prevent Poweroff blocking
+//            CompletableFuture.runAsync(()->this.failure.InduceAsync()).get(1, TimeUnit.SECONDS); // Prevent Poweroff blocking
+            this.failure.InduceAsync();
         } catch (Exception e) {
             e.printStackTrace();
         }

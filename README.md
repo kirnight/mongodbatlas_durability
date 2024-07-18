@@ -21,3 +21,12 @@ To run the code in AWS EC2 VM, copy the repo and type in:
 The result file containing all the records after run should be placed under `/gra_test/src/main/java`
 
 For data analysis, please use python file: `analysis.py` and specify the relative path of result file.
+
+---
+### Code Sections Requiring Entry of Access Key and Secret Key
+
+**Update the following files with your AWS credentials for proper functionality:**
+
+- **config.json**: Enter credentials for `replicas` and `awsinstanceid`. Ensure that the `replicas` match those displayed in the MongoDB replica set status (`rs.status`).
+- **PoweroffFailure.java**: Fill in `private key`, `access key`, `secret key`.
+- **ShutdownFailure.java**: Fill in `access key`, `secret key`.

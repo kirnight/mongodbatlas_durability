@@ -16,9 +16,11 @@ import org.reactivestreams.Publisher;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -122,7 +124,7 @@ public class App {
         //Failure thread setup
         Failure failInduce = settings.getFailure(database, map);
 
-        FailureRunner fail = new FailureRunner(failInduce,new FailureLogger(LocalDateTime.now(),LocalDateTime.now()));
+        FailureRunner fail = new FailureRunner(failInduce,new FailureLogger());
         runners[numThreads] = new Thread(new failureRunnable(fail, ExperimentTime));
 
         // Start threading
@@ -154,16 +156,25 @@ public class App {
         completeLog.sort(Comparator.comparing(o -> o.timeStamp));
 
 
+        BufferedWriter bufferedWriter = null;
         try {
             FileWriter writer = new FileWriter("result.txt", false);
-            BufferedWriter bufferedWriter = new BufferedWriter(writer);
+            bufferedWriter = new BufferedWriter(writer);
             bufferedWriter.write(fail.logger.fail+"  "+ fail.logger.fix+"\n");
             for(int k = 0; k < completeLog.size();k++){
                 bufferedWriter.write(completeLog.get(k).toString()+"\n");
             }
-            bufferedWriter.close();
+            // bufferedWriter.close();
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            if (bufferedWriter != null) {
+                try {
+                    bufferedWriter.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
 
 

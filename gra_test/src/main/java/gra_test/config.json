@@ -1,8 +1,8 @@
 {
   "replicas": [
-      "<replicas1>",
-      "<replicas2>",
-      "<replicas3>"
+    "<replicas1>",
+    "<replicas2>",
+    "<replicas3>"
   ],
 
   "awsinstanceid": [
@@ -25,13 +25,13 @@
 
   "numThread": "20",
 
-  "writeProbability": "0.7",
+  "writeProbability": "0.3",
 
   "operationInterval": "20",
 
   "intervalVariance": "1",
 
-  "experiment": "300",
+  "experiment": "200",
 
   "failure": "poweroff"
 

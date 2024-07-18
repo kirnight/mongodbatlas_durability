@@ -19,21 +19,21 @@ plugins {
 repositories {
     // Use jcenter for resolving dependencies.
     // You can declare any Maven/Ivy/file repository here.
-    jcenter()
+//    jcenter()
     mavenCentral()
 }
 
 dependencies {
     // This dependency is used by the application.
-    implementation 'com.google.guava:guava:28.2-jre'
+    implementation 'com.google.guava:guava:28.2-jre' // why can't I use 33.2.1-jre
 
     // Use JUnit test framework
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.2'
 
-    compile 'org.mongodb:mongodb-driver-sync:4.1.0'
-    compile 'org.mongodb:mongodb-driver-reactivestreams:4.1.1'
-    compile 'com.googlecode.json-simple:json-simple:1.1.1'
-    implementation platform('com.amazonaws:aws-java-sdk-bom:1.11.882')
+    implementation 'org.mongodb:mongodb-driver-sync:5.1.1'
+    implementation 'org.mongodb:mongodb-driver-reactivestreams:5.1.1'
+    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+    implementation platform('com.amazonaws:aws-java-sdk-bom:1.12.745')
     implementation 'com.amazonaws:aws-java-sdk-ec2'
 }
 

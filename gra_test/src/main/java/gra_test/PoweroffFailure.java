@@ -19,9 +19,11 @@ import com.amazonaws.services.ec2.model.StartInstancesRequest;
 
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 
 public class PoweroffFailure implements Failure {
@@ -81,16 +83,26 @@ public class PoweroffFailure implements Failure {
         String command = "ssh -i "+myKey+" "+shutdownvm+" -o StrictHostKeyChecking=no\n sudo poweroff -f";
         try {
             Process process = runtime.exec(command);
-            BufferedReader err = new BufferedReader(new InputStreamReader((process.getErrorStream())));
-            String in;
-            while((in = err.readLine())!=null){
-                System.out.println(in);
+            if (!process.waitFor(1, TimeUnit.MINUTES)) {
+                System.out.println("Command timeout, attempting to destroy the process.");
+                process.destroy();
             }
-            err.close();
+
+            try (BufferedReader err = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                String in;
+                while ((in = err.readLine()) != null) {
+                    System.out.println(in); // 打印错误流中的信息
+                }
+            } catch (IOException e) {
+                System.out.println("Error while reading from the process's error stream.");
+                e.printStackTrace();
+            }
+
+            System.out.println("Command executed");
+
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
     @Override
